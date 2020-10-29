@@ -30,6 +30,13 @@ func dataSourceCloudflareDNSRecords() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"filter": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"dns_records": {
 				Type:     schema.TypeList,
 				Computed: true,
@@ -90,6 +97,8 @@ func dataSourceCloudflareDNSRecordsRead(d *schema.ResourceData, meta interface{}
 		Content: d.Get("content").(string),
 	}
 
+	recordFilterList := d.Get("filter").([]interface{})
+
 	dns_records, err := client.DNSRecords(zoneId, recordFilter)
 	if err != nil {
 		return fmt.Errorf("error listing DNS Records: %s", err)
@@ -97,6 +106,20 @@ func dataSourceCloudflareDNSRecordsRead(d *schema.ResourceData, meta interface{}
 
 	dnsRecordDetails := make([]interface{}, 0)
 	for _, v := range dns_records {
+		if len(recordFilterList) > 0 {
+			counter := 0
+			for counter < len(recordFilterList) {
+				if recordFilterList[counter] == v.Name {
+					break
+				}
+				counter++
+			}
+
+			if counter == len(recordFilterList) {
+				continue
+			}
+		}
+
 		dnsRecordDetails = append(dnsRecordDetails, map[string]interface{}{
 			"id":          v.ID,
 			"name":        v.Name,
